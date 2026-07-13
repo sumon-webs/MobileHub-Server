@@ -36,6 +36,7 @@ async function main() {
           };
         }
 
+
         // Price filter
         if (minPrice || maxPrice) {
           query.price = {};
@@ -54,7 +55,6 @@ async function main() {
 
         const skip = (currentPage - 1) * perPage;
 
-        // Get mobiles
         const result = await mobilesCollection
           .find(query)
           .sort({ _id: -1 })
@@ -62,36 +62,67 @@ async function main() {
           .limit(perPage)
           .toArray();
 
-        // Total data count
         const total = await mobilesCollection.countDocuments(query);
 
         res.status(200).json({
           success: true,
-
           message: "Mobiles fetched successfully",
-
           data: result,
-
           pagination: {
             total,
-
             page: currentPage,
-
             limit: perPage,
-
             totalPages: Math.ceil(total / perPage),
           },
         });
       } catch (error) {
         res.status(500).json({
           success: false,
-
           message: "Failed to fetch mobiles",
-
-          error,
+          error: error instanceof Error ? error.message : error,
         });
       }
     });
+
+    app.get("/api/my-mobiles/:userId", async (req, res) => {
+      try {
+        const { userId } = req.params;
+        const { page = "1", limit = "8" } = req.query;
+
+        const currentPage = Number(page);
+        const perPage = Number(limit);
+        const skip = (currentPage - 1) * perPage;
+
+        const query = { userId };
+
+        const result = await mobilesCollection
+          .find(query)
+          .sort({ _id: -1 })
+          .skip(skip)
+          .limit(perPage)
+          .toArray();
+
+        const total = await mobilesCollection.countDocuments(query);
+
+        res.status(200).json({
+          success: true,
+          message: "My mobiles fetched successfully",
+          data: result,
+          pagination: {
+            total,
+            page: currentPage,
+            limit: perPage,
+            totalPages: Math.ceil(total / perPage),
+          },
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          message: "Failed to fetch my mobiles",
+          error: error instanceof Error ? error.message : error,
+        });
+      }
+    })
 
     app.get("/api/mobiles/:id", async (req, res) => {
       try {
@@ -118,6 +149,45 @@ async function main() {
         res.status(500).json({
           success: false,
           message: "Failed to fetch mobile",
+          error: error instanceof Error ? error.message : error,
+        });
+      }
+    });
+
+    app.post("/api/mobiles", async (req, res) => {
+      console.log("Hit");
+      try {
+        const mobile = req.body;
+
+        // Basic validation
+        if (
+          !mobile.title ||
+          !mobile.shortDescription ||
+          !mobile.description ||
+          !mobile.price ||
+          !mobile.brand ||
+          !mobile.releaseDate
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: "All required fields are required.",
+          });
+        }
+
+        const result = await mobilesCollection.insertOne({
+          ...mobile,
+          createdAt: new Date(),
+        });
+
+        res.status(201).json({
+          success: true,
+          message: "Mobile added successfully.",
+          data: result,
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          message: "Failed to add mobile.",
           error: error instanceof Error ? error.message : error,
         });
       }

@@ -10,8 +10,8 @@ const PORT = process.env.PORT || 5000;
 
 async function main() {
   try {
-    // await client.connect();
-    // console.log("✅ MongoDB Connected");
+    await client.connect();
+    console.log("✅ MongoDB Connected");
 
     const db = client.db(process.env.DB_NAME);
     const mobilesCollection = db.collection<TMobile>("mobiles");
@@ -249,9 +249,7 @@ async function main() {
       }
     });
 
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on ${PORT}`);
-    });
+    app.listen(PORT);
   } catch (error) {
     console.log(error);
   }

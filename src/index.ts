@@ -10,8 +10,8 @@ const PORT = process.env.PORT || 5000;
 
 async function main() {
   try {
-    await client.connect();
-    console.log("✅ MongoDB Connected");
+    // await client.connect();
+    // console.log("✅ MongoDB Connected");
 
     const db = client.db(process.env.DB_NAME);
     const mobilesCollection = db.collection<TMobile>("mobiles");
@@ -35,7 +35,6 @@ async function main() {
             $options: "i",
           };
         }
-
 
         // Price filter
         if (minPrice || maxPrice) {
@@ -122,8 +121,65 @@ async function main() {
           error: error instanceof Error ? error.message : error,
         });
       }
-    })
+    });
 
+    app.get("/api/my-mobiles/:userId/:id", async (req, res) => {
+      try {
+        const { userId, id } = req.params;
+
+        const mobile = await mobilesCollection.findOne({
+          _id: new ObjectId(id),
+          userId,
+        });
+
+        if (!mobile) {
+          return res.status(404).json({
+            success: false,
+            message: "Mobile not found",
+          });
+        }
+
+        res.status(200).json({
+          success: true,
+          message: "Mobile fetched successfully",
+          data: mobile,
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          message: "Failed to fetch mobile",
+          error: error instanceof Error ? error.message : error,
+        });
+      }
+    });
+    app.delete("/api/my-mobiles/:userId/:id", async (req, res) => {
+      try {
+        const { userId, id } = req.params;
+
+        const result = await mobilesCollection.deleteOne({
+          _id: new ObjectId(id),
+          userId,
+        });
+
+        if (result.deletedCount === 0) {
+          return res.status(404).json({
+            success: false,
+            message: "Mobile not found or unauthorized",
+          });
+        }
+
+        res.status(200).json({
+          success: true,
+          message: "Mobile deleted successfully",
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          message: "Failed to delete mobile",
+          error: error instanceof Error ? error.message : error,
+        });
+      }
+    });
     app.get("/api/mobiles/:id", async (req, res) => {
       try {
         const { id } = req.params;

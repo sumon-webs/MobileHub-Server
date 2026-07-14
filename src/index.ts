@@ -5,6 +5,7 @@ import client from "./config/db";
 import app from "./app";
 import { TMobile } from "./types/TMobiles";
 import { ObjectId } from "mongodb";
+import { NextFunction, Request, Response } from "express";
 
 const PORT = process.env.PORT || 5000;
 
@@ -15,6 +16,24 @@ async function main() {
 
     const db = client.db(process.env.DB_NAME);
     const mobilesCollection = db.collection<TMobile>("mobiles");
+
+    const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+      const authHeader = req.get("Authorization");
+      // অথবা: const authHeader = req.header("Authorization");
+
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      const token = authHeader.split(" ")[1];
+
+      console.log(token);
+
+      next();
+    };
 
     app.get("/api/mobiles", async (req, res) => {
       try {
@@ -83,7 +102,7 @@ async function main() {
       }
     });
 
-    app.get("/api/my-mobiles/:userId", async (req, res) => {
+    app.get("/api/my-mobiles/:userId", verifyToken, async (req, res) => {
       try {
         const { userId } = req.params;
         const { page = "1", limit = "8" } = req.query;
@@ -123,10 +142,15 @@ async function main() {
       }
     });
 
-    app.get("/api/my-mobiles/:userId/:id", async (req, res) => {
+    app.get("/api/my-mobiles/:userId/:id", verifyToken, async (req, res) => {
       try {
         const { userId, id } = req.params;
-
+        if (Array.isArray(id)) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid id",
+          });
+        }
         const mobile = await mobilesCollection.findOne({
           _id: new ObjectId(id),
           userId,
@@ -152,10 +176,15 @@ async function main() {
         });
       }
     });
-    app.delete("/api/my-mobiles/:userId/:id", async (req, res) => {
+    app.delete("/api/my-mobiles/:userId/:id", verifyToken, async (req, res) => {
       try {
         const { userId, id } = req.params;
-
+        if (Array.isArray(id)) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid id",
+          });
+        }
         const result = await mobilesCollection.deleteOne({
           _id: new ObjectId(id),
           userId,
@@ -210,8 +239,8 @@ async function main() {
       }
     });
 
-    app.post("/api/mobiles", async (req, res) => {
-      console.log("Hit");
+    app.post("/api/mobiles", verifyToken, async (req, res) => {
+      
       try {
         const mobile = req.body;
 
